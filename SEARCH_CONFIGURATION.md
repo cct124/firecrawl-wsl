@@ -4,93 +4,53 @@
 
 ✅ **Scrape（网页抓取）**: 正常工作  
 ✅ **Crawl（批量爬取）**: 正常工作  
-❌ **Search（搜索）**: 不可用 - DuckDuckGo 被网络规则阻止
+✅ **Search（搜索）**: 正常工作
 
-## ⚠️ 问题说明
+## ⚠️ 问题说明（已解决）
 
-搜索功能依赖外部搜索引擎，在 WSL2/Docker 环境中可能遇到网络限制：
-- DuckDuckGo（默认）: ❌ 被安全规则阻止
-- 需要配置其他搜索源
+~~搜索功能依赖外部搜索引擎，在 WSL2/Docker 环境中可能遇到网络限制：~~
+~~- DuckDuckGo（默认）: ❌ 被安全规则阻止~~
+
+**问题已解决！** 通过修改环境变量配置，DuckDuckGo 搜索功能现已正常工作。
 
 ## 🔧 解决方案
 
-### 方案 1: 使用 SearchAPI（推荐）
+### 启用 DuckDuckGo 搜索
 
-SearchAPI 是一个付费的搜索聚合服务，支持多个搜索引擎。
+问题根源：Firecrawl 的安全检查机制阻止了对某些 IP 地址的连接，导致 DuckDuckGo 搜索被拒绝。
 
-#### 步骤：
-1. 访问 https://searchapi.com/ 注册账号
-2. 获取 API 密钥
-3. 配置环境变量：
+#### 修复步骤：
 
+1. 编辑环境变量文件：
 ```bash
-# 编辑 .env 文件
-nano /home/janex/firecrawl/.env
+nano /home/janex/Project/firecrawl-wsl/.env
 ```
 
-添加：
+2. 添加以下配置：
 ```env
-SEARCHAPI_API_KEY=your-api-key-here
-SEARCHAPI_ENGINE=google  # 可选: google, bing, baidu 等
+ALLOW_LOCAL_WEBHOOKS=true
 ```
 
-4. 重启服务：
+3. 重启服务使配置生效：
 ```bash
-sudo docker compose -f /home/janex/firecrawl/docker-compose.yaml restart api
+sudo docker compose -f /home/janex/Project/firecrawl-wsl/docker-compose.yaml down
+sudo docker compose -f /home/janex/Project/firecrawl-wsl/docker-compose.yaml up -d
 ```
 
-### 方案 2: 使用 SearXNG（免费，自托管）
-
-SearXNG 是一个开源的元搜索引擎。
-
-#### 快速部署 SearXNG：
-
-```bash
-# 1. 创建 SearXNG 容器
-sudo docker run -d \
-  --name searxng \
-  --network firecrawl_backend \
-  -p 8080:8080 \
-  -e BASE_URL=http://localhost:8080 \
-  searxng/searxng:latest
-
-# 2. 配置 Firecrawl 使用 SearXNG
-# 编辑 .env 添加：
-echo "SEARXNG_ENDPOINT=http://searxng:8080" >> /home/janex/firecrawl/.env
-
-# 3. 重启 Firecrawl
-sudo docker compose -f /home/janex/firecrawl/docker-compose.yaml restart api
-```
-
-访问 SearXNG: http://localhost:8080
-
-### 方案 3: 禁用搜索功能
-
-如果不需要搜索功能，可以继续使用 Scrape 和 Crawl：
-
-```bash
-# 搜索功能是可选的，不影响核心功能
-# Scrape 和 Crawl 功能完全正常
-```
+**注意**：使用 `restart` 命令无法加载新的环境变量，必须先 `down` 再 `up -d`。
 
 ## 📝 测试搜索功能
 
 配置完成后测试：
 
 ```bash
-# 使用 SearchAPI
+# 测试搜索功能
 curl -X POST http://localhost:3002/v0/search \
   -H "Content-Type: application/json" \
-  -d '{"query":"Python programming"}'
-
-# 使用 SearXNG
-curl -X POST http://localhost:3002/v0/search \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query":"Python tutorial",
-    "limit": 5
-  }'
+  -d '{"query":"Python programming","limit":3}'
 ```
+
+预期输出：返回包含搜索结果的 JSON 数据，包括 URL、标题、描述和完整网页内容。
 
 ## 🎯 核心功能验证
 
@@ -113,20 +73,24 @@ curl -X POST http://localhost:3002/v0/crawl \
   }'
 ```
 
-## 💡 推荐配置
+## 💡 技术说明
 
-对于大多数用户：
-1. **仅需网页抓取/爬取**: 无需配置搜索，现有功能完全可用 ✅
-2. **需要搜索功能**: 推荐使用 SearXNG（免费自托管）
-3. **企业用户**: 使用 SearchAPI（稳定可靠）
+### 问题原因
 
-## 🔗 相关链接
+Firecrawl 使用 `safeFetch` 安全机制来防止访问私有 IP 地址，避免 SSRF（服务器端请求伪造）攻击。默认情况下，这个安全检查会阻止某些被误判为私有地址的连接，导致 DuckDuckGo 搜索失败。
 
-- SearchAPI: https://searchapi.com/
-- SearXNG 文档: https://docs.searxng.org/
+### 解决原理
+
+设置 `ALLOW_LOCAL_WEBHOOKS=true` 会禁用私有 IP 检查，允许所有网络连接通过，从而解决 DuckDuckGo 被阻止的问题。
+
+**安全提示**：此配置会降低 SSRF 防护级别，仅建议在本地开发或受信任的网络环境中使用。
+
+## 🔗 相关资源
+
 - Firecrawl 文档: https://docs.firecrawl.dev/features/search
+- GitHub 仓库: https://github.com/mendableai/firecrawl
 
 ---
 
-**最后更新**: 2025-12-14  
-**状态**: 核心功能正常，搜索需要额外配置
+**最后更新**: 2025-12-16  
+**状态**: ✅ 所有功能正常工作

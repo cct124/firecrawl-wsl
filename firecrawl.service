@@ -1,0 +1,14 @@
+[Unit]
+Description=Firecrawl Service
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/janex/Project/firecrawl-wsl
+ExecStart=/usr/bin/docker compose -f docker-compose.yaml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.yaml down
+
+[Install]
+WantedBy=multi-user.target
