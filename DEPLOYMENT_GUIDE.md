@@ -214,15 +214,26 @@ MAX_CONCURRENT_JOBS=10
 BROWSER_POOL_SIZE=10
 ```
 
-### 2. 配置 systemd 自启动
+### 2. 配置 systemd 自启动（可选）
 
-创建 systemd 服务文件：
+> **注意**：此功能为可选项。如果您只是在开发环境测试，可以跳过此步骤，手动使用 `docker compose up -d` 启动服务即可。
+
+#### 适用场景
+
+- ✅ 生产服务器需要自动恢复服务
+- ✅ 避免重启后手动启动的麻烦
+- ✅ 需要统一的服务管理接口
+- ❌ 开发测试环境（不推荐，避免意外占用资源）
+
+#### 配置步骤
+
+1. 创建 systemd 服务文件：
 
 ```bash
 sudo nano /etc/systemd/system/firecrawl.service
 ```
 
-添加以下内容：
+2. 添加以下内容（**注意修改 WorkingDirectory 为实际路径**）：
 
 ```ini
 [Unit]
@@ -233,15 +244,15 @@ After=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/path/to/firecrawl
-ExecStart=/usr/bin/docker compose up -d
-ExecStop=/usr/bin/docker compose down
+WorkingDirectory=/home/janex/Project/firecrawl-wsl
+ExecStart=/usr/bin/docker compose -f docker-compose.yaml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.yaml down
 
 [Install]
 WantedBy=multi-user.target
 ```
 
-启用并启动服务：
+3. 启用并启动服务：
 
 ```bash
 # 重新加载 systemd 配置
@@ -255,6 +266,45 @@ sudo systemctl start firecrawl
 
 # 查看状态
 sudo systemctl status firecrawl
+```
+
+#### 服务管理命令
+
+```bash
+# 启动服务
+sudo systemctl start firecrawl
+
+# 停止服务
+sudo systemctl stop firecrawl
+
+# 重启服务
+sudo systemctl restart firecrawl
+
+# 查看状态
+sudo systemctl status firecrawl
+
+# 查看日志
+sudo journalctl -u firecrawl -f
+
+# 禁用开机自启（保留服务文件）
+sudo systemctl disable firecrawl
+
+# 完全删除服务
+sudo systemctl disable firecrawl
+sudo systemctl stop firecrawl
+sudo rm /etc/systemd/system/firecrawl.service
+sudo systemctl daemon-reload
+```
+
+#### 验证自启动
+
+```bash
+# 测试重启后自动启动
+sudo reboot
+
+# 重启后检查服务状态
+sudo systemctl status firecrawl
+docker compose ps
 ```
 
 ### 3. 配置 Nginx 反向代理
