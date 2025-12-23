@@ -193,8 +193,43 @@ sudo ufw allow from YOUR_IP to any port 3002
 ```
 
 ### 3. 设置开机自启动
+
+#### ✅ 方法一：Docker Compose Restart Policy（推荐，已配置）
+
+所有服务已配置 `restart: unless-stopped` 策略，系统重启后会自动启动。
+
+**验证配置：**
 ```bash
-# 创建 systemd 服务
+# 检查重启策略
+sudo docker inspect firecrawl-api-1 --format "{{.HostConfig.RestartPolicy.Name}}"
+# 输出：unless-stopped
+
+# 确认 Docker 服务开机自启
+sudo systemctl is-enabled docker
+# 输出：enabled
+```
+
+**测试自动启动：**
+```bash
+# 重启系统
+sudo reboot
+
+# 启动后检查服务（等待系统完全启动）
+sudo docker ps
+```
+
+**restart: unless-stopped 的行为：**
+- ✅ 容器崩溃时自动重启
+- ✅ 系统重启后自动启动
+- ✅ Docker daemon 重启后自动启动
+- ⚠️ 只有手动停止（`docker stop`）才不会重启
+
+#### 方法二：Systemd 服务（可选）
+
+如果需要更细粒度的控制，可以创建 systemd 服务：
+
+```bash
+# 创建服务文件
 sudo nano /etc/systemd/system/firecrawl.service
 ```
 
@@ -203,7 +238,8 @@ sudo nano /etc/systemd/system/firecrawl.service
 [Unit]
 Description=Firecrawl Service
 Requires=docker.service
-After=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
@@ -211,6 +247,8 @@ RemainAfterExit=yes
 WorkingDirectory=/home/janex/firecrawl
 ExecStart=/usr/bin/docker compose -f docker-compose.yaml up -d
 ExecStop=/usr/bin/docker compose -f docker-compose.yaml down
+User=janex
+Group=janex
 
 [Install]
 WantedBy=multi-user.target
@@ -218,9 +256,30 @@ WantedBy=multi-user.target
 
 启用服务：
 ```bash
+sudo systemctl daemon-reload
 sudo systemctl enable firecrawl
 sudo systemctl start firecrawl
+
+# 检查状态
+sudo systemctl status firecrawl
 ```
+
+管理命令：
+```bash
+# 启动
+sudo systemctl start firecrawl
+
+# 停止
+sudo systemctl stop firecrawl
+
+# 重启
+sudo systemctl restart firecrawl
+
+# 查看日志
+sudo journalctl -u firecrawl -f
+```
+
+> **注意**: 如果使用方法一（Docker Compose restart policy），则无需配置 systemd 服务。两种方法选择其一即可。
 
 ## 📝 注意事项
 
