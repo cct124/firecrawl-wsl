@@ -96,11 +96,15 @@ services:
       EXTRACT_WORKER_PORT: ${EXTRACT_WORKER_PORT:-3004}
       WORKER_PORT: ${WORKER_PORT:-3005}
       ENV: local
+      ALLOW_LOCAL_WEBHOOKS: "true"
+      FIRECRAWL_LOG_TO_FILE: "true"
     depends_on:
       - redis
       - playwright-service
     ports:
       - "${PORT:-3002}:${INTERNAL_PORT:-3002}"
+    volumes:
+      - ./apps/api/logs:/app/logs
     command: node dist/src/harness.js --start-docker
     # Resource limits for Docker Compose (not Swarm)
     # Increase if you have more CPU cores/RAM available

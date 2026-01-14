@@ -58,7 +58,7 @@ export const logger = winston.createLogger({
       ? [
           new winston.transports.File({
             filename:
-              "firecrawl-" +
+              "/app/logs/firecrawl-" +
               (process.argv[1].includes("worker") ? "worker" : "app") +
               ".log",
             format: winston.format.combine(
