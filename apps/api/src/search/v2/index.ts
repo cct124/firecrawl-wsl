@@ -17,7 +17,7 @@ import {
   type BraveSearchLimitState,
 } from "./brave-search-limit";
 
-export interface SearchProviderResult {
+interface SearchProviderResult {
   response: SearchV2Response;
   warning?: string;
 }

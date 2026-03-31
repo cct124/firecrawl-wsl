@@ -3,7 +3,7 @@ import { redisEvictConnection } from "../../services/redis";
 
 const BRAVE_SEARCH_LIMIT_STATE_KEY = "search:brave:limit-state";
 
-export type BraveSearchLimitReason = "quota_exhausted";
+type BraveSearchLimitReason = "quota_exhausted";
 
 export interface BraveSearchLimitState {
   reason: BraveSearchLimitReason;
