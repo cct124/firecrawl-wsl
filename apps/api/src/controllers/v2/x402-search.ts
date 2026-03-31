@@ -286,7 +286,7 @@ export async function x402SearchController(
       req.body.categories as CategoryOption[],
     );
 
-    const searchResponse = (await search({
+    const { response: searchResponse, warning } = await search({
       query: searchQuery,
       logger,
       advanced: false,
@@ -298,7 +298,7 @@ export async function x402SearchController(
       location: req.body.location,
       type: searchTypes,
       enterprise: req.body.enterprise,
-    })) as SearchV2Response;
+    });
 
     // Add category labels to web results
     if (searchResponse.web && searchResponse.web.length > 0) {
@@ -552,6 +552,7 @@ export async function x402SearchController(
 
         return res.status(200).json({
           success: true,
+          warning,
           data: searchResponse,
           scrapeIds,
           creditsUsed: credits_billed,
@@ -638,6 +639,7 @@ export async function x402SearchController(
     // For sync scraping or no scraping, don't include scrapeIds
     return res.status(200).json({
       success: true,
+      warning,
       data: searchResponse,
       creditsUsed: credits_billed,
       id: jobId,

@@ -201,6 +201,7 @@ export async function searchController(
 
     return res.status(200).json({
       success: true,
+      warning: result.warning,
       data: result.response,
       creditsUsed: result.totalCredits,
       id: jobId,

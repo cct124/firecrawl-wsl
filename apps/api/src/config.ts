@@ -59,6 +59,12 @@ const configSchema = z.object({
   PREVIEW_TOKEN: z.string().optional(),
   SEARCH_PREVIEW_TOKEN: z.string().optional(),
   SEARCH_SERVICE_API_SECRET: z.string().optional(),
+  BRAVE_SEARCH_API_KEY: z.string().optional(),
+  BRAVE_SEARCH_QUOTA_BLOCK_SECONDS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(21600),
 
   // Database & Storage
   POSTGRES_HOST: z.string().default("localhost"),

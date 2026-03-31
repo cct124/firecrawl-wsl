@@ -176,6 +176,10 @@ export async function searchController(
     // Transform v2 response to v1 format (flat array)
     const docs = transformToV1Response(result.response);
 
+    if (result.warning) {
+      responseData.warning = result.warning;
+    }
+
     if (docs.length === 0) {
       logger.info("No search results found");
       responseData.warning = "No search results found";
