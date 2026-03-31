@@ -19,7 +19,7 @@ describe("generic-ai", () => {
 
   it("uses chat completions for SiliconFlow-compatible OpenAI endpoints", async () => {
     config.OPENAI_API_KEY = "test-key";
-    config.OPENAI_BASE_URL = "https://api.siliconflow.com/v1";
+    config.OPENAI_BASE_URL = "https://api.siliconflow.cn/v1";
     config.MODEL_NAME = "Qwen/Qwen3-30B-A3B-Instruct-2507";
 
     const calls: Array<{ url: string; body: unknown }> = [];
@@ -71,7 +71,7 @@ describe("generic-ai", () => {
     expect(result.object).toEqual({ answer: "ok" });
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url).toBe(
-      "https://api.siliconflow.com/v1/chat/completions",
+      "https://api.siliconflow.cn/v1/chat/completions",
     );
     expect(getModel("gpt-4o-mini", "openai").provider).toBe("siliconflow.chat");
   });

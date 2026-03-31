@@ -42,7 +42,9 @@ function isSiliconFlowBaseURL(baseURL: string) {
     const { hostname } = new URL(baseURL);
     return (
       hostname === "api.siliconflow.com" ||
-      hostname.endsWith(".siliconflow.com")
+      hostname.endsWith(".siliconflow.com") ||
+      hostname === "api.siliconflow.cn" ||
+      hostname.endsWith(".siliconflow.cn")
     );
   } catch {
     return false;
