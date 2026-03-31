@@ -20,19 +20,15 @@ import { generateCrawlerOptionsFromPrompt } from "../../scraper/scrapeURL/transf
 import { CostTracking } from "../../lib/cost-tracking";
 import { checkPermissions } from "../../lib/permissions";
 import { buildPromptWithWebsiteStructure } from "../../lib/map-utils";
-import { modifyCrawlUrl } from "../../utils/url-utils";
 import { crawlGroup } from "../../services/worker/nuq";
 import { logRequest } from "../../services/logging/log_job";
+import { getScrapeZDR } from "../../lib/zdr-helpers";
 
 export async function crawlController(
   req: RequestWithAuth<{}, CrawlResponse, CrawlRequest>,
   res: Response<CrawlResponse>,
 ) {
   const preNormalizedBody = req.body;
-
-  // Check for URL modification before parsing
-  const urlModificationInfo = modifyCrawlUrl(preNormalizedBody.url);
-
   req.body = crawlRequestSchema.parse(req.body);
 
   const permissions = checkPermissions(req.body, req.acuc?.flags);
@@ -44,7 +40,7 @@ export async function crawlController(
   }
 
   const zeroDataRetention =
-    req.acuc?.flags?.forceZDR || req.body.zeroDataRetention;
+    getScrapeZDR(req.acuc?.flags) === "forced" || req.body.zeroDataRetention;
 
   const id = uuidv7();
   const logger = _logger.child({
@@ -189,6 +185,7 @@ export async function crawlController(
       teamId: req.auth.team_id,
       saveScrapeResultToGCS: config.GCS_FIRE_ENGINE_BUCKET_NAME ? true : false,
       zeroDataRetention,
+      agentIndexOnly: (req as any).agentIndexOnly ?? false,
     },
     team_id: req.auth.team_id,
     createdAt: Date.now(),
@@ -235,6 +232,7 @@ export async function crawlController(
       internalOptions: sc.internalOptions,
       origin: req.body.origin,
       integration: req.body.integration,
+      billing: { endpoint: "crawl", jobId: id },
       crawl_id: id,
       webhook: req.body.webhook,
       v1: true,
@@ -250,9 +248,6 @@ export async function crawlController(
     success: true,
     id,
     url: `${protocol}://${req.get("host")}/v2/crawl/${id}`,
-    ...(urlModificationInfo.wasModified && {
-      warning: `The URL you provided included a '/*' suffix, which has been removed to ensure a more targeted and efficient crawl.`,
-    }),
     ...(req.body.prompt && {
       promptGeneratedOptions: promptGeneratedOptions,
       finalCrawlerOptions: finalCrawlerOptions,

@@ -25,9 +25,9 @@ x-common-env: &common-env
   REDIS_URL: ${REDIS_URL:-redis://redis:6379}
   REDIS_RATE_LIMIT_URL: ${REDIS_URL:-redis://redis:6379}
   PLAYWRIGHT_MICROSERVICE_URL: ${PLAYWRIGHT_MICROSERVICE_URL:-http://playwright-service:3000/scrape}
-  POSTGRES_USER: ${POSTGRES_USER:-firecrawl}
-  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-firecrawl_password}"
-  POSTGRES_DB: ${POSTGRES_DB:-firecrawl}
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+  POSTGRES_DB: ${POSTGRES_DB:-postgres}
   POSTGRES_HOST: ${POSTGRES_HOST:-nuq-postgres}
   POSTGRES_PORT: ${POSTGRES_PORT:-5432}
   USE_DB_AUTHENTICATION: ${USE_DB_AUTHENTICATION:-false}
@@ -40,6 +40,7 @@ x-common-env: &common-env
   MODEL_NAME: ${MODEL_NAME}
   MODEL_EMBEDDING_NAME: ${MODEL_EMBEDDING_NAME} 
   OLLAMA_BASE_URL: ${OLLAMA_BASE_URL} 
+  AUTUMN_SECRET_KEY: ${AUTUMN_SECRET_KEY}
   SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
   BULL_AUTH_KEY: ${BULL_AUTH_KEY}
   TEST_API_KEY: ${TEST_API_KEY}
@@ -68,6 +69,7 @@ services:
       PROXY_SERVER: ${PROXY_SERVER}
       PROXY_USERNAME: ${PROXY_USERNAME}
       PROXY_PASSWORD: ${PROXY_PASSWORD}
+      ALLOW_LOCAL_WEBHOOKS: ${ALLOW_LOCAL_WEBHOOKS}
       BLOCK_MEDIA: ${BLOCK_MEDIA}
       # Configure maximum concurrent pages for Playwright browser instances
       MAX_CONCURRENT_PAGES: ${CRAWL_CONCURRENT_REQUESTS:-10}
@@ -95,12 +97,17 @@ services:
       PORT: ${INTERNAL_PORT:-3002}
       EXTRACT_WORKER_PORT: ${EXTRACT_WORKER_PORT:-3004}
       WORKER_PORT: ${WORKER_PORT:-3005}
+      NUQ_RABBITMQ_URL: amqp://rabbitmq:5672
       ENV: local
       ALLOW_LOCAL_WEBHOOKS: "true"
       FIRECRAWL_LOG_TO_FILE: "true"
     depends_on:
-      - redis
-      - playwright-service
+      redis:
+        condition: service_started
+      playwright-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "${PORT:-3002}:${INTERNAL_PORT:-3002}"
     volumes:
@@ -128,14 +135,32 @@ services:
         max-size: "5m"
         max-file: "2"
         compress: "true"
+    
+  rabbitmq:
+    image: rabbitmq:3-management
+    networks:
+      - backend
+    command: rabbitmq-server
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+        compress: "true"
   
   nuq-postgres:
     build: apps/nuq-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-firecrawl}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-firecrawl_password}
-      POSTGRES_DB: ${POSTGRES_DB:-firecrawl}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
     networks:
       - backend
     logging:
